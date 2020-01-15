@@ -1,3 +1,4 @@
+import logging
 import traceback
 import asyncio
 
@@ -6,7 +7,8 @@ from .Check import FailedCheck
 
 
 class Command(object):
-    def __init__(self, func, **kwargs):
+    def __init__(self, name, func, **kwargs):
+        self.name = name
         self.func = func
 
         self.hidden = kwargs.pop("hidden", False)
@@ -31,10 +33,11 @@ class Command(object):
             await ctx.reply("Operation timed out")
         except Exception as e:
             full_traceback = traceback.format_exc()
-            only_error = traceback.TracebackException.from_exception(e).format_exception_only()
+            only_error = "".join(traceback.TracebackException.from_exception(e).format_exception_only())
 
             log("Caught the following exception while running command:\n{}".format(full_traceback),
-                context=ctx.msg.id)
+                context=ctx.msg.id,
+                level=logging.ERROR)
 
             await ctx.reply(
                 ("An unexpected internal error occurred while running your command! "

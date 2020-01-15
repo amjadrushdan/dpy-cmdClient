@@ -40,7 +40,7 @@ class Check(object):
         def decorator(func):
             @wraps(func)
             async def wrapper(ctx):
-                result = await self.run(*args, **kwargs)
+                result = await self.run(ctx, *args, **kwargs)
                 if not result:
                     raise FailedCheck(self)
 
@@ -55,22 +55,22 @@ class Check(object):
         """
         # First check the parents
         for check in self.parents:
-            if check.run(ctx, *args, **kwargs):
+            if await check.run(ctx, *args, **kwargs):
                 return True
 
         # Then check the requirements
         for check in self.required:
-            if not check.run(ctx, *args, **kwargs):
+            if not await check.run(ctx, *args, **kwargs):
                 return False
 
         # Now if we have passed all these, check the main function
-        return self.check_func(ctx, *args, **kwargs)
+        return await self.check_func(ctx, *args, **kwargs)
 
 
 class FailedCheck(Exception):
     """
     Custom exception to throw when a pre-command check fails.
-    Stores the check whicch failed.
+    Stores the check which failed.
     """
     def __init__(self, check):
         super().__init__()

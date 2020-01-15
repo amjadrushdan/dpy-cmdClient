@@ -8,16 +8,22 @@ class Context(object):
         'ch',
         'guild',
         'objects',
-        'cmd'
+        'arg_str',
+        'cmd',
+        'author'
     )
 
     def __init__(self, client, **kwargs):
         self.client = client
 
-        self.msg = kwargs.get("message", None)
+        self.msg = kwargs.pop("message", None)
 
-        self.ch = self.msg.channel if self.msg is not None else kwargs.get("channel", None)
-        self.guild = self.msg.guild if self.msg is not None else kwargs.get("guild", None)
+        self.ch = self.msg.channel if self.msg is not None else kwargs.pop("channel", None)
+        self.guild = self.msg.guild if self.msg is not None else kwargs.pop("guild", None)
+        self.author = self.msg.author if self.msg is not None else kwargs.pop("author", None)
+
+        self.arg_str = kwargs.pop("arg_str", None)
+        self.cmd = kwargs.pop("cmd", None)
 
     @classmethod
     def util(cls, util_func):

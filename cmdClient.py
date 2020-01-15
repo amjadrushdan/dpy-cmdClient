@@ -6,18 +6,34 @@ import logging
 import discord
 
 from .logger import log
+from .Command import Command
+from .Context import Context
 
 
-# Command dictionary of the form {cmdname: cmdfunc}
-cmds = {}
+# List of current active `Command`s
+cmds = []
+
+# Cache of current command names associated to commands, of the form {cmdname: Command}
+cmd_cache = {}
+
+
+def update_cache():
+    """
+    Updates the command cache.
+    """
+    cmd_cache.update({cmd.name: cmd for cmd in cmds})
 
 
 # Command decorator for adding new commands to cmds
 def cmd(name, **kwargs):
-    def wrapper(func):
-        cmds[name] = func
+    def decorator(func):
+        cmd = Command(name, func, **kwargs)
+        cmds.append(cmd)
+        update_cache()
+
         return func
-    return wrapper
+
+    return decorator
 
 
 class cmdClient(discord.Client):
@@ -68,7 +84,7 @@ class cmdClient(discord.Client):
 
         # If the message starts with a valid command, pass it along to run_cmd
         content = content[len(self.prefix):].strip()
-        cmdname = next((cmdname for cmdname in cmds if content[:len(cmdname)].lower() == cmdname), None)
+        cmdname = next((cmdname for cmdname in cmd_cache if content[:len(cmdname)].lower() == cmdname), None)
 
         if cmdname is not None:
             await self.run_cmd(message, cmdname, content[len(cmdname):].strip())
@@ -88,17 +104,26 @@ class cmdClient(discord.Client):
         """
         log(("Executing command '{cmdname}' "
              "from user '{message.author}' ({message.author.id}) "
-             "in guild '{message.guild}' ({message.guild.id}).\n"
+             "in guild '{message.guild}' ({guildid}).\n"
              "{content}").format(
                  cmdname=cmdname,
                  message=message,
+                 guildid=message.guild.id if message.guild else None,
                  content='\n'.join(('\t' + line for line in message.content.splitlines()))),
             context=message.id
             )
-        cmdfunc = cmds[cmdname]
+        cmd = cmd_cache[cmdname]
+
+        # Build the context
+        ctx = Context(
+            client=self,
+            message=message,
+            arg_str=arg_str,
+            cmd=cmd
+        )
 
         try:
-            await cmdfunc(self, message, arg_str)
+            await cmd.run(ctx)
         except Exception:
             log("The following exception encountered executing command '{}'.\n{}".format(cmdname,
                                                                                          traceback.format_exc()),
