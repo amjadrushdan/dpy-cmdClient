@@ -1,3 +1,5 @@
+import datetime
+import discord
 # from .logger import log
 
 
@@ -40,3 +42,20 @@ async def reply(ctx, *args, **kwargs):
     TODO: Some output protection for everyone and here pings.
     """
     return await ctx.ch.send(*args, **kwargs)
+
+
+@Context.util
+async def error_reply(ctx, error_str):
+    """
+    Notify the user of a user level error.
+    Typically, this will occur in a red embed, posted in the command channel.
+    """
+    embed = discord.Embed(
+        colour=discord.Colour.red(),
+        description=error_str,
+        timestamp=datetime.datetime.utcnow()
+    )
+    try:
+        return await ctx.ch.send(embed=embed)
+    except discord.Forbidden:
+        return await ctx.reply(error_str)
