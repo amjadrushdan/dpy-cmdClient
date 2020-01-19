@@ -3,6 +3,9 @@ import sys
 import os
 import traceback
 import logging
+import asyncio
+from bisect import bisect
+
 import discord
 
 from .logger import log
@@ -41,6 +44,7 @@ class cmdClient(discord.Client):
         super().__init__()
         self.prefix = prefix
         self.owners = owners or []
+        self.objects = {}
 
     async def on_ready(self):
         """
@@ -146,3 +150,47 @@ class cmdClient(discord.Client):
                 sys.path.remove(dir)
                 loaded += 1
         log("Imported {} modules from '{}', with {} new commands!".format(loaded, dir, len(cmds)-initial_cmds))
+
+    def add_after_event(self, event, func, priority=0):
+        """
+        Add an event handler to execute after the central event handler.
+
+        Parameters
+        ----------
+        event: str
+            Name of a valid discord.py event.
+        func: Function(Client, ...)
+            Function taking the client as its first argument, and the event parameters as the rest
+        priority: int
+            Priority indiciating which order the event handlers should be executed.
+            The core event handler is always executed first.
+            After that, handlers are executed in order of increasing priority.
+        """
+        async def new_func(*args, **kwargs):
+            try:
+                await func(*args, **kwargs)
+            except Exception:
+                log(
+                    ("Exception encountered executing event handler '{}' for event '{}'. "
+                     "Traceback:\n{}").format(
+                         func.__name__,
+                         event,
+                         traceback.format_exc()
+                     ), level=logging.ERROR
+                )
+
+        after_handler = "after_" + event
+        if not hasattr(self, after_handler):
+            setattr(self, after_handler, [])
+        handlers = getattr(self, after_handler)
+        handlers.insert(bisect([handler[1] for handler in handlers], priority), (new_func, priority))
+        log("Adding after_event handler \"{}\" for event \"{}\" with priority \"{}\"".format(
+            func.__name__, event, priority
+        ))
+
+    def dispatch(self, event, *args, **kwargs):
+        super().dispatch(event, *args, **kwargs)
+        after_handler = "after_"+event
+        if hasattr(self, after_handler):
+            for handler in getattr(self, after_handler):
+                asyncio.ensure_future(handler[0](self, *args, **kwargs), loop=self.loop)
