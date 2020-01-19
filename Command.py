@@ -4,6 +4,7 @@ import asyncio
 
 from .logger import log
 from .Check import FailedCheck
+from .lib import SafeCancellation
 
 
 class Command(object):
@@ -26,11 +27,18 @@ class Command(object):
             await self.func(ctx)
         except FailedCheck as e:
             log("Command failed check: {}".format(e.check.name), context=ctx.msg.id)
+
             if e.check.msg:
-                await ctx.reply(e.check.msg)
+                await ctx.error_reply(e.check.msg)
+        except SafeCancellation as e:
+            log("Caught a safe command cancellation: {}: {}".format(e.__class__.__name__, e.msg))
+
+            if e.msg is not None:
+                await ctx.error_reply(e.msg)
         except asyncio.TimeoutError:
-            log("Caught an unhandled TimeoutError", context=ctx.msg.id)
-            await ctx.reply("Operation timed out")
+            log("Caught an unhandled TimeoutError", context=ctx.msg.id, level=logging.WARNING)
+
+            await ctx.error_reply("Operation timed out.")
         except Exception as e:
             full_traceback = traceback.format_exc()
             only_error = "".join(traceback.TracebackException.from_exception(e).format_exception_only())
