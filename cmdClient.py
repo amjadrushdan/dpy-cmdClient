@@ -46,6 +46,9 @@ class cmdClient(discord.Client):
         self.owners = owners or []
         self.objects = {}
 
+        self.cmds = cmds
+        self.cmd_cache = cmd_cache
+
     async def on_ready(self):
         """
         Client has logged into discord and completed initialisation.
@@ -134,7 +137,7 @@ class cmdClient(discord.Client):
                 context=message.id,
                 level=logging.ERROR)
 
-    def load_dir(self, dir):
+    def load_dir(self, dirpath):
         """
         Import all modules in a directory.
         Primarily for the use of importing new commands.
@@ -142,14 +145,18 @@ class cmdClient(discord.Client):
         loaded = 0
         initial_cmds = len(cmds)
 
-        for fn in os.listdir(dir):
-            path = os.path.join(dir, fn)
+        for fn in os.listdir(dirpath):
+            path = os.path.join(dirpath, fn)
             if fn.endswith(".py"):
-                sys.path.append(dir)
-                imp.load_source("bot_module_" + str(fn), path)
-                sys.path.remove(dir)
+                sys.path.append(dirpath)
+                module = imp.load_source("bot_module_" + str(fn), path)
+                sys.path.remove(dirpath)
+
+                if "load_into" in dir(module):
+                    module.load_into(self)
+
                 loaded += 1
-        log("Imported {} modules from '{}', with {} new commands!".format(loaded, dir, len(cmds)-initial_cmds))
+        log("Imported {} modules from '{}', with {} new commands!".format(loaded, dirpath, len(cmds)-initial_cmds))
 
     def add_after_event(self, event, func, priority=0):
         """
