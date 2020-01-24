@@ -1,6 +1,7 @@
 import logging
 import traceback
 import asyncio
+import textwrap
 
 from .logger import log
 from .Check import FailedCheck
@@ -14,7 +15,7 @@ class Command(object):
 
         self.hidden = kwargs.pop("hidden", False)
         self.short_help = kwargs.pop('short_help', None)
-        self.long_help = func.__doc__ if func.__doc__ else None
+        self.long_help = self.parse_help()
 
         self.__dict__.update(kwargs)
 
@@ -52,8 +53,32 @@ class Command(object):
                  "Please report the following error to the developer:\n`{}`").format(only_error)
             )
 
-    def formatted_help(self, ctx):
+    def parse_help(self):
         """
-        Formats the long help of the current command and returns either a string or an embed.
+        Convert the docstring of the command function into a list of (fieldname, fieldcontent) tuples.
         """
-        return "```{}```".format(self.long_help)
+        if not self.func.__doc__:
+            return []
+
+        # Split the docstring into lines
+        lines = textwrap.dedent(self.func.__doc__).splitlines()
+        help_fields = []
+        field_name = ""
+        field_content = []
+
+        for line in lines:
+            if line.endswith(':'):
+                # New field!
+                if field_content:
+                    # Add the previous field to the table
+                    field = textwrap.dedent("\n".join(field_content))
+                    help_fields.append((field_name, field))
+
+                # Initialise the new field
+                field_name = line[:-1].strip()
+                field_content = []
+            else:
+                # Add the line to the current field content
+                field_content.append(line)
+
+        return help_fields
