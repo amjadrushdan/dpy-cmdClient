@@ -61,7 +61,7 @@ class Command(object):
             return []
 
         # Split the docstring into lines
-        lines = textwrap.dedent(self.func.__doc__).splitlines()
+        lines = textwrap.dedent(self.func.__doc__).strip().splitlines()
         help_fields = []
         field_name = ""
         field_content = []
@@ -80,5 +80,11 @@ class Command(object):
             else:
                 # Add the line to the current field content
                 field_content.append(line)
+
+        # Add the last field to the table if it exists
+        if field_content:
+            # Add the previous field to the table
+            field = textwrap.dedent("\n".join(field_content))
+            help_fields.append((field_name, field))
 
         return help_fields
