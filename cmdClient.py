@@ -24,7 +24,11 @@ def update_cache():
     """
     Updates the command cache.
     """
-    cmd_cache.update({cmd.name: cmd for cmd in cmds})
+    for cmd in cmds:
+        cmd_cache[cmd.name] = cmd
+
+        for alias in cmd.aliases:
+            cmd_cache[alias] = cmd
 
 
 # Command decorator for adding new commands to cmds

@@ -13,6 +13,7 @@ class Command(object):
         self.name = name
         self.func = func
 
+        self.aliases = kwargs.pop("aliases", [])
         self.hidden = kwargs.pop("hidden", False)
         self.short_help = kwargs.pop('short_help', None)
         self.long_help = self.parse_help()
