@@ -12,6 +12,7 @@ class Context(object):
         'objects',
         'arg_str',
         'cmd',
+        'alias',
         'author'
     )
 
@@ -26,6 +27,7 @@ class Context(object):
 
         self.arg_str = kwargs.pop("arg_str", None)
         self.cmd = kwargs.pop("cmd", None)
+        self.alias = kwargs.pop("alias", None)
 
     @classmethod
     def util(cls, util_func):

@@ -95,7 +95,8 @@ class cmdClient(discord.Client):
 
         # If the message starts with a valid command, pass it along to run_cmd
         content = content[len(self.prefix):].strip()
-        cmdname = next((cmdname for cmdname in cmd_cache if content[:len(cmdname)].lower() == cmdname), None)
+        cmdnames = [cmdname for cmdname in cmd_cache if content[:len(cmdname)].lower() == cmdname]
+        cmdname = max(cmdnames, key=len)
 
         if cmdname is not None:
             await self.run_cmd(message, cmdname, content[len(cmdname):].strip())
@@ -130,6 +131,7 @@ class cmdClient(discord.Client):
             client=self,
             message=message,
             arg_str=arg_str,
+            alias=cmdname,
             cmd=cmd
         )
 
