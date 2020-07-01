@@ -35,7 +35,9 @@ def update_cache():
 def cmd(name, **kwargs):
     def decorator(func):
         cmd = Command(name, func, **kwargs)
-        cmds.append(cmd)
+        # Add command if it doesn't exist already
+        if cmd.name not in cmd_cache:
+            cmds.append(cmd)
         update_cache()
 
         return func
