@@ -17,7 +17,8 @@ class Context(object):
         'arg_str',
         'cmd',
         'alias',
-        'author'
+        'author',
+        'prefix'
     )
 
     def __init__(self, client, **kwargs):
@@ -32,6 +33,7 @@ class Context(object):
         self.arg_str = kwargs.pop("arg_str", None)  # type: str
         self.cmd = kwargs.pop("cmd", None)  # type: Command
         self.alias = kwargs.pop("alias", None)  # type: str
+        self.prefix = kwargs.pop("prefix", None)  # type: str
 
     @classmethod
     def util(cls, util_func):

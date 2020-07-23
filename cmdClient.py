@@ -69,6 +69,17 @@ class cmdClient(discord.Client):
                     cache[alias] = cmd
         cls.cmd_cache = cache
 
+    async def valid_prefixes(self, message):
+        if self.prefix:
+            return self.prefix
+        else:
+            log("No prefix set and no prefix function implemented.",
+                level=logging.ERROR)
+            await self.close()
+
+    def set_valid_prefixes(self, func):
+        setattr(self, "valid_prefixes", func.__get__(self))
+
     def initialise_modules(self):
         for module in self.modules:
             log("Initialising module '{}'.".format(module.name))
@@ -120,20 +131,25 @@ class cmdClient(discord.Client):
         Parse incoming messages.
         If the message contains a valid command, pass the message to run_cmd
         """
-        # Check whether the message starts with the set prefix
         content = message.content.strip()
-        if not content.startswith(self.prefix):
+
+        # Get valid prefixes
+        prefixes = await self.valid_prefixes(message)
+
+        # Check whether the message starts with a valid prefix
+        prefix = next((prefix for prefix in prefixes if content.startswith(prefix)), None)
+        if prefix is None:
             return
 
         # If the message starts with a valid command, pass it along to run_cmd
-        content = content[len(self.prefix):].strip()
+        content = content[len(prefix):].strip()
         cmdnames = [cmdname for cmdname in self.cmd_cache if content[:len(cmdname)].lower() == cmdname]
 
         if cmdnames:
             cmdname = max(cmdnames, key=len)
-            await self.run_cmd(message, cmdname, content[len(cmdname):].strip())
+            await self.run_cmd(message, cmdname, content[len(cmdname):].strip(), prefix)
 
-    async def run_cmd(self, message, cmdname, arg_str):
+    async def run_cmd(self, message, cmdname, arg_str, prefix):
         """
         Run a command and pass it the command message and the arg_str.
 
@@ -175,7 +191,8 @@ class cmdClient(discord.Client):
             message=message,
             arg_str=arg_str,
             alias=cmdname,
-            cmd=cmd
+            cmd=cmd,
+            prefix=prefix
         )
 
         try:
