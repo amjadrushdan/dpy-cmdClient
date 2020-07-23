@@ -1,6 +1,7 @@
 import datetime
 import discord
 # from .logger import log
+from . import lib
 
 from . import cmdClient  # noqa
 from .Command import Command  # noqa
@@ -41,12 +42,15 @@ class Context(object):
 
 
 @Context.util
-async def reply(ctx, *args, **kwargs):
+async def reply(ctx, content=None, allow_everyone=False, **kwargs):
     """
     Helper function to reply in the current channel.
-    TODO: Some output protection for everyone and here pings.
     """
-    return await ctx.ch.send(*args, **kwargs)
+    if not allow_everyone:
+        if content:
+            content = lib.sterilise_content(content)
+
+    return await ctx.ch.send(content=content, **kwargs)
 
 
 @Context.util
