@@ -39,12 +39,12 @@ class Check(object):
         """
         def decorator(func):
             @wraps(func)
-            async def wrapper(ctx):
+            async def wrapper(ctx, *fargs, **fkargs):
                 result = await self.run(ctx, *args, **kwargs)
                 if not result:
                     raise FailedCheck(self)
 
-                return await func(ctx)
+                return await func(ctx, *fargs, **fkargs)
 
             return wrapper
         return decorator

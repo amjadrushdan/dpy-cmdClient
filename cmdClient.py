@@ -71,7 +71,7 @@ class cmdClient(discord.Client):
 
     async def valid_prefixes(self, message):
         if self.prefix:
-            return self.prefix
+            return (self.prefix,)
         else:
             log("No prefix set and no prefix function implemented.",
                 level=logging.ERROR)

@@ -5,7 +5,7 @@ import textwrap
 
 from .logger import log
 from .Check import FailedCheck
-from .lib import SafeCancellation
+from .lib import SafeCancellation, flag_parser
 
 
 class Command(object):
@@ -15,6 +15,7 @@ class Command(object):
         self.module = module
 
         self.aliases = kwargs.pop("aliases", [])
+        self.flags = kwargs.pop("flags", [])
         self.hidden = kwargs.pop("hidden", False)
         self.short_help = kwargs.pop('short_help', None)
         self.long_help = self.parse_help()
@@ -29,7 +30,11 @@ class Command(object):
         try:
             try:
                 await self.module.pre_command(ctx)
-                await self.func(ctx)
+                if self.flags:
+                    flags, remaining = flag_parser(ctx.arg_str, self.flags)
+                    await self.func(ctx, flags=flags, remaining=remaining)
+                else:
+                    await self.func(ctx)
                 await self.module.post_command(ctx)
             except Exception as e:
                 await self.module.on_exception(ctx, e)
