@@ -2,6 +2,9 @@ import datetime
 import discord
 # from .logger import log
 
+from . import cmdClient  # noqa
+from .Command import Command  # noqa
+
 
 class Context(object):
     __slots__ = (
@@ -17,17 +20,17 @@ class Context(object):
     )
 
     def __init__(self, client, **kwargs):
-        self.client = client
+        self.client = client  # type: cmdClient.cmdClient
 
-        self.msg = kwargs.pop("message", None)
+        self.msg = kwargs.pop("message", None)  # type: str
 
-        self.ch = self.msg.channel if self.msg is not None else kwargs.pop("channel", None)
-        self.guild = self.msg.guild if self.msg is not None else kwargs.pop("guild", None)
-        self.author = self.msg.author if self.msg is not None else kwargs.pop("author", None)
+        self.ch = self.msg.channel if self.msg is not None else kwargs.pop("channel", None)  # type: discord.Channel
+        self.guild = self.msg.guild if self.msg is not None else kwargs.pop("guild", None)  # type: discord.Guild
+        self.author = self.msg.author if self.msg is not None else kwargs.pop("author", None)  # type: discord.User
 
-        self.arg_str = kwargs.pop("arg_str", None)
-        self.cmd = kwargs.pop("cmd", None)
-        self.alias = kwargs.pop("alias", None)
+        self.arg_str = kwargs.pop("arg_str", None)  # type: str
+        self.cmd = kwargs.pop("cmd", None)  # type: Command
+        self.alias = kwargs.pop("alias", None)  # type: str
 
     @classmethod
     def util(cls, util_func):

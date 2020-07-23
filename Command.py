@@ -9,9 +9,10 @@ from .lib import SafeCancellation
 
 
 class Command(object):
-    def __init__(self, name, func, **kwargs):
+    def __init__(self, name, func, module, **kwargs):
         self.name = name
         self.func = func
+        self.module = module
 
         self.aliases = kwargs.pop("aliases", [])
         self.hidden = kwargs.pop("hidden", False)
@@ -26,7 +27,12 @@ class Command(object):
         Respond and log any exceptions that arise.
         """
         try:
-            await self.func(ctx)
+            try:
+                await self.module.pre_command(ctx)
+                await self.func(ctx)
+                await self.module.post_command(ctx)
+            except Exception as e:
+                await self.module.on_exception(ctx, e)
         except FailedCheck as e:
             log("Command failed check: {}".format(e.check.name), context=ctx.msg.id)
 
