@@ -26,8 +26,8 @@ class cmdClient(discord.Client):
 
     cmd_names = {}  # Command name cache, {cmdname: Command}, including aliases.
 
-    def __init__(self, prefix=None, owners=None, cmd_cache=None, baseContext=Context):
-        super().__init__()
+    def __init__(self, prefix=None, owners=None, cmd_cache=None, baseContext=Context, **kwargs):
+        super().__init__(**kwargs)
         self.prefix = prefix
         self.owners = owners or []
         self.objects = {}
@@ -105,7 +105,7 @@ class cmdClient(discord.Client):
             "User id {client.user.id}\n"
             "Logged in to {guilds} guilds\n"
             "------------------------------\n"
-            "Prefix is '{prefix}'\n"
+            "Default prefix is '{prefix}'\n"
             "Loaded {commands} commands\n"
             "------------------------------\n"
             "Ready to take commands!\n"
