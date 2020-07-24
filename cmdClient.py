@@ -133,17 +133,20 @@ class cmdClient(discord.Client):
         await self.parse_message(message)
 
     async def on_message_edit(self, before, after):
-        if (before.content != after.content) and (after.id in self.cmd_cache):
-            flatctx = self.cmd_cache[after.id]
-            cmd = self.cmd_names.get(flatctx['cmd'], None)
-            if cmd and cmd.handle_edits:
-                if after.id in self.active_contexts and self.active_contexts[after.id].task is not None:
-                    ctx = self.active_contexts.pop(after.id)
-                    ctx.task.cancel()
-                    asyncio.ensure_future(self.active_command_response_cleaner(ctx))
+        if (before.content != after.content):
+            if after.id in self.cmd_cache:
+                flatctx = self.cmd_cache[after.id]
+                cmd = self.cmd_names.get(flatctx['cmd'], None)
+                if cmd and cmd.handle_edits:
+                    if after.id in self.active_contexts and self.active_contexts[after.id].task is not None:
+                        ctx = self.active_contexts.pop(after.id)
+                        ctx.task.cancel()
+                        asyncio.ensure_future(self.active_command_response_cleaner(ctx))
+                    else:
+                        asyncio.ensure_future(self.flat_command_response_cleaner(flatctx))
+                    await self.parse_message(after)
                 else:
-                    asyncio.ensure_future(self.flat_command_response_cleaner(flatctx))
-                await self.parse_message(after)
+                    await self.parse_message(after)
 
     async def flat_command_response_cleaner(self, flatctx):
         ch = self.get_channel(flatctx['ch'])
