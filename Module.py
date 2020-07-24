@@ -35,7 +35,7 @@ class Module:
         def decorator(func):
             cmd = cmdClass(name, func, self, **kwargs)
             self.cmds.append(cmd)
-            cmdClient.cmdClient.update_cache()
+            cmdClient.cmdClient.update_cmdnames()
             return cmd
         return decorator
 

@@ -5,6 +5,7 @@ import traceback
 import logging
 import asyncio
 import itertools
+from cachetools import LRUCache
 from typing import ClassVar, Type, Optional
 from bisect import bisect
 
@@ -23,13 +24,18 @@ class cmdClient(discord.Client):
 
     modules = []  # List of loaded modules
 
-    cmd_cache = {}  # Command name cache, {cmdname: Command}, including aliases.
+    cmd_names = {}  # Command name cache, {cmdname: Command}, including aliases.
 
-    def __init__(self, prefix=None, owners=None):
+    def __init__(self, prefix=None, owners=None, cmd_cache=None, baseContext=Context):
         super().__init__()
         self.prefix = prefix
         self.owners = owners or []
         self.objects = {}
+
+        self.baseContext = Context  # type: Type[Context]
+
+        self.cmd_cache = cmd_cache or LRUCache(1000)  # Executed command cache, {messageid: ctxcache}
+        self.active_contexts = {}  # Current active contexts, {messageid: ctx}
 
     @property
     def cmds(self):
@@ -57,17 +63,17 @@ class cmdClient(discord.Client):
         return module.cmd(*args, **kwargs)
 
     @classmethod
-    def update_cache(cls):
+    def update_cmdnames(cls):
         """
         Updates the command name cache.
         """
-        cache = {}
+        cmds = {}
         for module in cls.modules:
             for cmd in module.cmds:
-                cache[cmd.name] = cmd
+                cmds[cmd.name] = cmd
                 for alias in cmd.aliases:
-                    cache[alias] = cmd
-        cls.cmd_cache = cache
+                    cmds[alias] = cmd
+        cls.cmd_names = cmds
 
     async def valid_prefixes(self, message):
         if self.prefix:
@@ -126,6 +132,38 @@ class cmdClient(discord.Client):
         """
         await self.parse_message(message)
 
+    async def on_message_edit(self, before, after):
+        if (before.content != after.content) and (after.id in self.cmd_cache):
+            flatctx = self.cmd_cache[after.id]
+            cmd = self.cmd_names.get(flatctx['cmd'], None)
+            if cmd and cmd.handle_edits:
+                if after.id in self.active_contexts and self.active_contexts[after.id].task is not None:
+                    ctx = self.active_contexts.pop(after.id)
+                    ctx.task.cancel()
+                    asyncio.ensure_future(self.active_command_response_cleaner(ctx))
+                else:
+                    asyncio.ensure_future(self.flat_command_response_cleaner(flatctx))
+                await self.parse_message(after)
+
+    async def flat_command_response_cleaner(self, flatctx):
+        ch = self.get_channel(flatctx['ch'])
+        if ch is not None:
+            for msgid in flatctx['sent_messages']:
+                try:
+                    msg = await ch.fetch_message(msgid)
+                    asyncio.ensure_future(msg.delete())
+                except Exception:
+                    pass
+
+    async def active_command_response_cleaner(self, ctx):
+        try:
+            if ctx.ch.permissions_for(ctx.guild.me).manage_messages:
+                await ctx.ch.delete_messages(ctx.sent_messages)
+            else:
+                await asyncio.gather(*(msg.delete() for msg in ctx.sent_messages))
+        except discord.NotFound:
+            pass
+
     async def parse_message(self, message):
         """
         Parse incoming messages.
@@ -143,7 +181,7 @@ class cmdClient(discord.Client):
 
         # If the message starts with a valid command, pass it along to run_cmd
         content = content[len(prefix):].strip()
-        cmdnames = [cmdname for cmdname in self.cmd_cache if content[:len(cmdname)].lower() == cmdname]
+        cmdnames = [cmdname for cmdname in self.cmd_names if content[:len(cmdname)].lower() == cmdname]
 
         if cmdnames:
             cmdname = max(cmdnames, key=len)
@@ -162,7 +200,7 @@ class cmdClient(discord.Client):
         arg_str: str
             The remaining content of the command message after the prefix and command name.
         """
-        cmd = self.cmd_cache[cmdname]
+        cmd = self.cmd_names[cmdname]
         log(("Executing command '{cmdname}' from module `{module}` "
              "from user '{message.author}' (uid:{message.author.id}) "
              "in guild '{message.guild}' (gid:{guildid}) "
@@ -186,7 +224,7 @@ class cmdClient(discord.Client):
                 await asyncio.sleep(1)
 
         # Build the context
-        ctx = Context(
+        ctx = self.baseContext(
             client=self,
             message=message,
             arg_str=arg_str,
@@ -195,6 +233,9 @@ class cmdClient(discord.Client):
             prefix=prefix
         )
 
+        # Add command to command cache and active contexts
+        self.cmd_cache[message.id] = ctx.flatten()
+        self.active_contexts[message.id] = ctx
         try:
             await cmd.run(ctx)
         except Exception:
@@ -203,6 +244,12 @@ class cmdClient(discord.Client):
                     traceback.format_exc()),
                 context="mid:{}".format(message.id),
                 level=logging.ERROR)
+        finally:
+            # Renew command in command cache
+            self.cmd_cache[message.id] = ctx.flatten()
+
+            # Remove message from active contexts
+            self.active_contexts.pop(message.id, None)
 
     def load_dir(self, dirpath):
         """

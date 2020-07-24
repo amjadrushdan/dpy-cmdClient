@@ -14,6 +14,8 @@ class Command(object):
         self.func = func
         self.module = module
 
+        self.handle_edits = kwargs.pop("handle_edits", True)
+
         self.aliases = kwargs.pop("aliases", [])
         self.flags = kwargs.pop("flags", [])
         self.hidden = kwargs.pop("hidden", False)
@@ -28,18 +30,10 @@ class Command(object):
         Respond and log any exceptions that arise.
         """
         try:
-            try:
-                await self.module.pre_command(ctx)
-                if self.flags:
-                    flags, remaining = flag_parser(ctx.arg_str, self.flags)
-                    await self.func(ctx, flags=flags, remaining=remaining)
-                else:
-                    await self.func(ctx)
-                await self.module.post_command(ctx)
-            except Exception as e:
-                await self.module.on_exception(ctx, e)
+            ctx.task = asyncio.ensure_future(self.exec_wrapper(ctx))
+            await ctx.task
         except FailedCheck as e:
-            log("Command failed check: {}".format(e.check.name), context=ctx.msg.id)
+            log("Command failed check: {}".format(e.check.name), context="mid:{}".format(ctx.msg.id))
 
             if e.check.msg:
                 await ctx.error_reply(e.check.msg)
@@ -49,21 +43,41 @@ class Command(object):
             if e.msg is not None:
                 await ctx.error_reply(e.msg)
         except asyncio.TimeoutError:
-            log("Caught an unhandled TimeoutError", context=ctx.msg.id, level=logging.WARNING)
+            log("Caught an unhandled TimeoutError", context="mid:{}".format(ctx.msg.id), level=logging.WARNING)
 
             await ctx.error_reply("Operation timed out.")
+        except asyncio.CancelledError:
+            log("Command was cancelled, probably due to a message edit.", context="mid:{}".format(ctx.msg.id))
         except Exception as e:
             full_traceback = traceback.format_exc()
             only_error = "".join(traceback.TracebackException.from_exception(e).format_exception_only())
 
             log("Caught the following exception while running command:\n{}".format(full_traceback),
-                context=ctx.msg.id,
+                context="mid:{}".format(ctx.msg.id),
                 level=logging.ERROR)
 
             await ctx.reply(
                 ("An unexpected internal error occurred while running your command! "
                  "Please report the following error to the developer:\n`{}`").format(only_error)
             )
+        else:
+            log("Command completed execution without error.", context="mid:{}".format(ctx.msg.id))
+
+    async def exec_wrapper(self, ctx):
+        """
+        Execute the command in the current context.
+        May raise an exception if not handled by the module on_exception handler.
+        """
+        try:
+            await self.module.pre_command(ctx)
+            if self.flags:
+                flags, remaining = flag_parser(ctx.arg_str, self.flags)
+                await self.func(ctx, flags=flags, remaining=remaining)
+            else:
+                await self.func(ctx)
+            await self.module.post_command(ctx)
+        except Exception as e:
+            await self.module.on_exception(ctx, e)
 
     def parse_help(self):
         """

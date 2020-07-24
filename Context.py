@@ -1,5 +1,6 @@
 import datetime
 import discord
+import asyncio  # noqa
 # from .logger import log
 from . import lib
 
@@ -18,7 +19,9 @@ class Context(object):
         'cmd',
         'alias',
         'author',
-        'prefix'
+        'prefix',
+        'sent_messages',
+        'task'
     )
 
     def __init__(self, client, **kwargs):
@@ -35,12 +38,33 @@ class Context(object):
         self.alias = kwargs.pop("alias", None)  # type: str
         self.prefix = kwargs.pop("prefix", None)  # type: str
 
+        self.sent_messages = []  # type: List[discord.Message]
+        self.task = None  # type: asyncio.Task
+
     @classmethod
     def util(cls, util_func):
         """
         Decorator to make a utility function available as a Context instance method
         """
         setattr(cls, util_func.__name__, util_func)
+
+    def flatten(self):
+        """
+        Returns a flat version of the current context for debugging or caching.
+        Does not store `objects`.
+        Intended to be overriden if different cache data is needed.
+        """
+        return {
+            'msg': self.msg.id,
+            'ch': self.ch.id,
+            'guild': self.guild.id,
+            'arg_str': self.arg_str,
+            'cmd': self.cmd.name,
+            'alias': self.alias,
+            'author': self.author.id,
+            'prefix': self.prefix,
+            'sent_messages': [message.id for message in self.sent_messages]
+        }
 
 
 @Context.util
@@ -52,7 +76,9 @@ async def reply(ctx, content=None, allow_everyone=False, **kwargs):
         if content:
             content = lib.sterilise_content(content)
 
-    return await ctx.ch.send(content=content, **kwargs)
+    message = await ctx.ch.send(content=content, **kwargs)
+    ctx.sent_messages.append(message)
+    return message
 
 
 @Context.util
