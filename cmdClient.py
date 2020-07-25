@@ -42,7 +42,7 @@ class cmdClient(discord.Client):
         """
         A list of current available commands.
         """
-        return list(itertools.chain(*[module.cmds for module in self.modules]))
+        return list(itertools.chain(*[module.cmds for module in self.modules if module.enabled]))
 
     @classmethod
     def get_default_module(cls):
@@ -69,10 +69,11 @@ class cmdClient(discord.Client):
         """
         cmds = {}
         for module in cls.modules:
-            for cmd in module.cmds:
-                cmds[cmd.name] = cmd
-                for alias in cmd.aliases:
-                    cmds[alias] = cmd
+            if module.enabled:
+                for cmd in module.cmds:
+                    cmds[cmd.name] = cmd
+                    for alias in cmd.aliases:
+                        cmds[alias] = cmd
         cls.cmd_names = cmds
 
     async def valid_prefixes(self, message):
@@ -88,8 +89,9 @@ class cmdClient(discord.Client):
 
     def initialise_modules(self):
         for module in self.modules:
-            log("Initialising module '{}'.".format(module.name))
-            module.initialise(self)
+            if module.enabled:
+                log("Initialising module '{}'.".format(module.name))
+                module.initialise(self)
 
     async def on_ready(self):
         """
@@ -97,8 +99,9 @@ class cmdClient(discord.Client):
         Log a ready message with some basic statistics and info.
         """
         for module in self.modules:
-            log("Launching module '{}'.".format(module.name))
-            await module.launch(self)
+            if module.enabled:
+                log("Launching module '{}'.".format(module.name))
+                await module.launch(self)
 
         ready_str = (
             "Logged in as {client.user}\n"
@@ -219,6 +222,7 @@ class cmdClient(discord.Client):
         if not cmd.module.enabled:
             log("Skipping command due to disabled module.",
                 context="mid:{}".format(message.id))
+            self.update_cmdnames()
 
         if not cmd.module.ready:
             log("Waiting for module '{}' to be ready.".format(cmd.module.name),
