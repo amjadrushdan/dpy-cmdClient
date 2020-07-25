@@ -27,7 +27,7 @@ class Context(object):
     def __init__(self, client, **kwargs):
         self.client = client  # type: cmdClient.cmdClient
 
-        self.msg = kwargs.pop("message", None)  # type: str
+        self.msg = kwargs.pop("message", None)  # type: discord.Message
 
         self.ch = self.msg.channel if self.msg is not None else kwargs.pop("channel", None)  # type: discord.Channel
         self.guild = self.msg.guild if self.msg is not None else kwargs.pop("guild", None)  # type: discord.Guild
