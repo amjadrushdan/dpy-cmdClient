@@ -93,15 +93,18 @@ class cmdClient(discord.Client):
                 log("Initialising module '{}'.".format(module.name))
                 module.initialise(self)
 
+    async def launch_modules(self):
+        for module in self.modules:
+            if module.enabled:
+                log("Launching module '{}'.".format(module.name))
+                await module.launch(self)
+
     async def on_ready(self):
         """
         Client has logged into discord and completed initialisation.
         Log a ready message with some basic statistics and info.
         """
-        for module in self.modules:
-            if module.enabled:
-                log("Launching module '{}'.".format(module.name))
-                await module.launch(self)
+        await self.launch_modules()
 
         ready_str = (
             "Logged in as {client.user}\n"
