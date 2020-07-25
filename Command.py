@@ -38,7 +38,8 @@ class Command(object):
             if e.check.msg:
                 await ctx.error_reply(e.check.msg)
         except SafeCancellation as e:
-            log("Caught a safe command cancellation: {}: {}".format(e.__class__.__name__, e.msg))
+            log("Caught a safe command cancellation: {}: {}".format(e.__class__.__name__, e.msg),
+                context="mid:{}".format(ctx.msg.id))
 
             if e.msg is not None:
                 await ctx.error_reply(e.msg)
