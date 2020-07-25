@@ -15,6 +15,7 @@ class Context(object):
         'ch',
         'guild',
         'objects',
+        'args',
         'arg_str',
         'cmd',
         'alias',
@@ -38,7 +39,13 @@ class Context(object):
         self.alias = kwargs.pop("alias", None)  # type: str
         self.prefix = kwargs.pop("prefix", None)  # type: str
 
+        # Argument string, intended to be overriden by argument parsers
+        self.args = self.arg_str  # type:str
+
+        # Cache of messages sent in this context.
         self.sent_messages = []  # type: List[discord.Message]
+
+        # Task for the final wrapped command
         self.task = None  # type: asyncio.Task
 
     @classmethod
