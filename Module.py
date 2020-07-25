@@ -17,6 +17,9 @@ class Module:
         self.ready = False
         self.enabled = True
 
+        self.launch_tasks = []
+        self.init_tasks = []
+
         cmdClient.cmdClient.modules.append(self)
 
         log("New module created.", context=self.name)
@@ -46,12 +49,27 @@ class Module:
         setattr(self, func.__name__, func)
         log("Attached '{}'.".format(func.__name__), context=self.name)
 
+    def launch_task(self, func):
+        """
+        Decorator which adds a launch function to complete during the default launch procedure.
+        """
+        self.launch_tasks.append(func)
+        return func
+
+    def init_task(self, func):
+        """
+        Decorator which adds an init function to complete during the default initialise procedure.
+        """
+        self.init_tasks.append(func)
+        return func
+
     def initialise(self, client):
         """
         Initialise hook.
         Executed by `client.initialise_modules`.
         """
-        pass
+        for task in self.init_tasks:
+            task(client)
 
     async def launch(self, client):
         """
@@ -59,6 +77,9 @@ class Module:
         Executed in `client.on_ready`.
         Must set `ready` to `True`, otherwise all commands will hang.
         """
+        for task in self.launch_tasks:
+            await task(client)
+
         self.ready = True
 
     async def pre_command(self, ctx):
