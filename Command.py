@@ -72,8 +72,8 @@ class Command(object):
         try:
             await self.module.pre_command(ctx)
             if self.flags:
-                flags, remaining = flag_parser(ctx.arg_str, self.flags)
-                await self.func(ctx, flags=flags, remaining=remaining)
+                flags, ctx.args = flag_parser(ctx.arg_str, self.flags)
+                await self.func(ctx, flags=flags)
             else:
                 await self.func(ctx)
             await self.module.post_command(ctx)
