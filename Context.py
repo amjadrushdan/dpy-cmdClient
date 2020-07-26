@@ -64,7 +64,7 @@ class Context(object):
         return {
             'msg': self.msg.id,
             'ch': self.ch.id,
-            'guild': self.guild.id,
+            'guild': self.guild.id if self.guild else None,
             'arg_str': self.arg_str,
             'cmd': self.cmd.name,
             'alias': self.alias,
