@@ -54,6 +54,7 @@ class Module:
         Decorator which adds a launch function to complete during the default launch procedure.
         """
         self.launch_tasks.append(func)
+        log("Adding launch task '{}'.".format(func.__name__), context=self.name)
         return func
 
     def init_task(self, func):
@@ -61,6 +62,7 @@ class Module:
         Decorator which adds an init function to complete during the default initialise procedure.
         """
         self.init_tasks.append(func)
+        log("Adding initialisation task '{}'.".format(func.__name__), context=self.name)
         return func
 
     def initialise(self, client):
