@@ -14,6 +14,7 @@ class Module:
         self.baseCommand = baseCommand
 
         self.cmds = []
+        self.initialised = False
         self.ready = False
         self.enabled = True
 
@@ -68,10 +69,19 @@ class Module:
     def initialise(self, client):
         """
         Initialise hook.
-        Executed by `client.initialise_modules`.
+        Executed by `client.initialise_modules`,
+        or possibly by modules which depend on this one.
         """
-        for task in self.init_tasks:
-            task(client)
+        if not self.initialised:
+            log("Running initialisation tasks.", context=self.name)
+
+            for task in self.init_tasks:
+                log("Running initialisation task '{}'.".format(task.__name__), context=self.name)
+                task(client)
+
+            self.initialised = True
+        else:
+            log("Already initialised, skipping initialisation.", context=self.name)
 
     async def launch(self, client):
         """
@@ -79,10 +89,16 @@ class Module:
         Executed in `client.on_ready`.
         Must set `ready` to `True`, otherwise all commands will hang.
         """
-        for task in self.launch_tasks:
-            await task(client)
+        if not self.ready:
+            log("Running launch tasks.", context=self.name)
 
-        self.ready = True
+            for task in self.launch_tasks:
+                log("Running launch task '{}'.".format(task.__name__), context=self.name)
+                await task(client)
+
+            self.ready = True
+        else:
+            log("Already launched, skipping launch.", context=self.name)
 
     async def pre_command(self, ctx):
         """

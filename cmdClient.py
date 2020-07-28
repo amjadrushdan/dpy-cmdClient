@@ -88,15 +88,15 @@ class cmdClient(discord.Client):
         setattr(self, "valid_prefixes", func.__get__(self))
 
     def initialise_modules(self):
+        log("Initialising all client modules.")
         for module in self.modules:
             if module.enabled:
-                log("Initialising module '{}'.".format(module.name))
                 module.initialise(self)
 
     async def launch_modules(self):
+        log("Launching all client modules.")
         for module in self.modules:
             if module.enabled:
-                log("Launching module '{}'.".format(module.name))
                 await module.launch(self)
 
     async def on_ready(self):
