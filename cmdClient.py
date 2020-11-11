@@ -142,7 +142,7 @@ class cmdClient(discord.Client):
         if (before.content != after.content):
             if after.id in self.cmd_cache:
                 flatctx = self.cmd_cache[after.id]
-                cmd = self.cmd_names.get(flatctx['cmd'], None)
+                cmd = self.cmd_names.get(flatctx.cmd, None)
                 if cmd and cmd.handle_edits:
                     if after.id in self.active_contexts and self.active_contexts[after.id].task is not None:
                         ctx = self.active_contexts.pop(after.id)
@@ -155,9 +155,9 @@ class cmdClient(discord.Client):
                     await self.parse_message(after)
 
     async def flat_command_response_cleaner(self, flatctx):
-        ch = self.get_channel(flatctx['ch'])
+        ch = self.get_channel(flatctx.ch)
         if ch is not None:
-            for msgid in flatctx['sent_messages']:
+            for msgid in flatctx.sent_messages:
                 try:
                     msg = await ch.fetch_message(msgid)
                     asyncio.ensure_future(msg.delete())

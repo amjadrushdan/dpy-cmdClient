@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 import datetime
 import discord
 import asyncio  # noqa
@@ -6,6 +8,12 @@ from . import lib
 
 from . import cmdClient  # noqa
 from .Command import Command  # noqa
+
+
+FlatContext = namedtuple(
+    'FlatContext',
+    ('msg', 'ch', 'guild', 'arg_str', 'cmd', 'alias', 'author', 'prefix', 'sent_messages')
+)
 
 
 class Context(object):
@@ -61,17 +69,17 @@ class Context(object):
         Does not store `objects`.
         Intended to be overriden if different cache data is needed.
         """
-        return {
-            'msg': self.msg.id,
-            'ch': self.ch.id,
-            'guild': self.guild.id if self.guild else None,
-            'arg_str': self.arg_str,
-            'cmd': self.cmd.name,
-            'alias': self.alias,
-            'author': self.author.id,
-            'prefix': self.prefix,
-            'sent_messages': [message.id for message in self.sent_messages]
-        }
+        return FlatContext(
+            msg=self.msg.id if self.msg else None,
+            ch=self.ch.id if self.ch else None,
+            guild=self.guild.id if self.guild else None,
+            arg_str=self.arg_str,
+            cmd=self.cmd.name if self.cmd else None,
+            alias=self.alias,
+            author=self.author.id if self.author else None,
+            prefix=self.prefix,
+            sent_messages=tuple([message.id for message in self.sent_messages])
+        )
 
 
 @Context.util
