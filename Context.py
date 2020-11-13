@@ -30,7 +30,7 @@ class Context(object):
         'author',
         'prefix',
         'sent_messages',
-        'task'
+        'tasks'
     )
 
     def __init__(self, client, **kwargs):
@@ -53,8 +53,8 @@ class Context(object):
         # Cache of messages sent in this context.
         self.sent_messages = []  # type: List[discord.Message]
 
-        # Task for the final wrapped command
-        self.task = None  # type: asyncio.Task
+        # Context tasks, including for the final wrapped command
+        self.tasks = []  # type: List[asyncio.Task]
 
     @classmethod
     def util(cls, util_func):
@@ -108,6 +108,10 @@ async def error_reply(ctx, error_str):
         timestamp=datetime.datetime.utcnow()
     )
     try:
-        return await ctx.ch.send(embed=embed)
+        message = await ctx.ch.send(embed=embed)
+        ctx.sent_messages.append(message)
+        return message
     except discord.Forbidden:
-        return await ctx.reply(error_str)
+        message = await ctx.reply(error_str)
+        ctx.sent_messages.append(message)
+        return message

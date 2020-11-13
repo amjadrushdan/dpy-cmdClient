@@ -144,9 +144,9 @@ class cmdClient(discord.Client):
                 flatctx = self.cmd_cache[after.id]
                 cmd = self.cmd_names.get(flatctx.cmd, None)
                 if cmd and cmd.handle_edits:
-                    if after.id in self.active_contexts and self.active_contexts[after.id].task is not None:
+                    if after.id in self.active_contexts and self.active_contexts[after.id].tasks:
                         ctx = self.active_contexts.pop(after.id)
-                        ctx.task.cancel()
+                        [task.cancel() for task in ctx.tasks]
                         asyncio.ensure_future(self.active_command_response_cleaner(ctx))
                     else:
                         asyncio.ensure_future(self.flat_command_response_cleaner(flatctx))

@@ -30,8 +30,9 @@ class Command(object):
         Respond and log any exceptions that arise.
         """
         try:
-            ctx.task = asyncio.ensure_future(self.exec_wrapper(ctx))
-            await ctx.task
+            task = asyncio.ensure_future(self.exec_wrapper(ctx))
+            ctx.tasks.append(task)
+            await task
         except FailedCheck as e:
             log("Command failed check: {}".format(e.check.name), context="mid:{}".format(ctx.msg.id))
 
