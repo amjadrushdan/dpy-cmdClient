@@ -147,8 +147,11 @@ class cmdClient(discord.Client):
                 # Cleanup if required
                 if flatctx.cleanup_on_edit:
                     if after.id in self.active_contexts and self.active_contexts[after.id].tasks:
-                        ctx = self.active_contexts.pop(after.id)
+                        ctx = self.active_contexts[after.id]
                         [task.cancel() for task in ctx.tasks]
+                        # Wait for the task to be removed from active contexts
+                        while after.id in self.active_contexts:
+                            await asyncio.sleep(0.1)
                         asyncio.ensure_future(self.active_command_response_cleaner(ctx))
                     else:
                         asyncio.ensure_future(self.flat_command_response_cleaner(flatctx))
