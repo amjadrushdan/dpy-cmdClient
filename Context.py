@@ -12,7 +12,17 @@ from .Command import Command  # noqa
 
 FlatContext = namedtuple(
     'FlatContext',
-    ('msg', 'ch', 'guild', 'arg_str', 'cmd', 'alias', 'author', 'prefix', 'sent_messages')
+    ('msg',
+     'ch',
+     'guild',
+     'arg_str',
+     'cmd',
+     'alias',
+     'author',
+     'prefix',
+     'cleanup_on_edit',
+     'reparse_on_edit',
+     'sent_messages')
 )
 
 
@@ -30,6 +40,8 @@ class Context(object):
         'author',
         'prefix',
         'sent_messages',
+        'cleanup_on_edit',
+        'reparse_on_edit',
         'tasks'
     )
 
@@ -46,6 +58,16 @@ class Context(object):
         self.cmd = kwargs.pop("cmd", None)  # type: Command
         self.alias = kwargs.pop("alias", None)  # type: str
         self.prefix = kwargs.pop("prefix", None)  # type: str
+
+        self.cleanup_on_edit = kwargs.pop(
+            "cleanup_on_edit",
+            self.cmd.handle_edits if self.cmd is not None else True
+        )
+
+        self.reparse_on_edit = kwargs.pop(
+            "reparse_on_edit",
+            self.cmd.handle_edits if self.cmd is not None else True
+        )
 
         # Argument string, intended to be overriden by argument parsers
         self.args = self.arg_str  # type:str
@@ -78,6 +100,8 @@ class Context(object):
             alias=self.alias,
             author=self.author.id if self.author else None,
             prefix=self.prefix,
+            cleanup_on_edit=self.cleanup_on_edit,
+            reparse_on_edit=self.reparse_on_edit,
             sent_messages=tuple([message.id for message in self.sent_messages])
         )
 

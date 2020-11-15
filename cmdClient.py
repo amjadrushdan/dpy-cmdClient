@@ -26,7 +26,7 @@ class cmdClient(discord.Client):
 
     cmd_names = {}  # Command name cache, {cmdname: Command}, including aliases.
 
-    def __init__(self, prefix=None, owners=None, cmd_cache=None, baseContext=Context, **kwargs):
+    def __init__(self, prefix=None, owners=None, ctx_cache=None, baseContext=Context, **kwargs):
         super().__init__(**kwargs)
         self.prefix = prefix
         self.owners = owners or []
@@ -34,8 +34,10 @@ class cmdClient(discord.Client):
 
         self.baseContext = Context  # type: Type[Context]
 
-        self.cmd_cache = cmd_cache or LRUCache(1000)  # Executed command cache, {messageid: ctxcache}
+        self.ctx_cache = ctx_cache or LRUCache(1000)  # Previous Context cache, {messageid: ctxcache}
         self.active_contexts = {}  # Current active contexts, {messageid: ctx}
+
+        self.extra_message_parsers = []
 
     @property
     def cmds(self):
@@ -140,19 +142,22 @@ class cmdClient(discord.Client):
 
     async def on_message_edit(self, before, after):
         if (before.content != after.content):
-            if after.id in self.cmd_cache:
-                flatctx = self.cmd_cache[after.id]
-                cmd = self.cmd_names.get(flatctx.cmd, None)
-                if cmd and cmd.handle_edits:
+            if after.id in self.ctx_cache:
+                flatctx = self.ctx_cache[after.id]
+                # Cleanup if required
+                if flatctx.cleanup_on_edit:
                     if after.id in self.active_contexts and self.active_contexts[after.id].tasks:
                         ctx = self.active_contexts.pop(after.id)
                         [task.cancel() for task in ctx.tasks]
                         asyncio.ensure_future(self.active_command_response_cleaner(ctx))
                     else:
                         asyncio.ensure_future(self.flat_command_response_cleaner(flatctx))
+                # Reparse if required
+                if flatctx.reparse_on_edit:
                     await self.parse_message(after)
-                else:
-                    await self.parse_message(after)
+            else:
+                # If the message isn't in cache, reparse
+                await self.parse_message(after)
 
     async def flat_command_response_cleaner(self, flatctx):
         ch = self.get_channel(flatctx.ch)
@@ -185,18 +190,20 @@ class cmdClient(discord.Client):
 
         # Check whether the message starts with a valid prefix
         prefixes = [prefix for prefix in prefixes if content.startswith(prefix)]
-        if prefixes is None:
-            return
+        if prefixes is not None:
+            for prefix in sorted(prefixes, reverse=True):
+                # If the message starts with a valid command, pass it along to run_cmd
+                content = content[len(prefix):].strip()
+                cmdnames = [cmdname for cmdname in self.cmd_names if content[:len(cmdname)].lower() == cmdname]
 
-        for prefix in sorted(prefixes, reverse=True):
-            # If the message starts with a valid command, pass it along to run_cmd
-            content = content[len(prefix):].strip()
-            cmdnames = [cmdname for cmdname in self.cmd_names if content[:len(cmdname)].lower() == cmdname]
+                if cmdnames:
+                    cmdname = max(cmdnames, key=len)
+                    await self.run_cmd(message, cmdname, content[len(cmdname):].strip(), prefix)
+                    return
 
-            if cmdnames:
-                cmdname = max(cmdnames, key=len)
-                await self.run_cmd(message, cmdname, content[len(cmdname):].strip(), prefix)
-                break
+        # Run the extra message parsers
+        for parser in self.extra_message_parsers:
+            asyncio.ensure_future(parser[0](self, message), loop=self.loop)
 
     async def run_cmd(self, message, cmdname, arg_str, prefix):
         """
@@ -246,7 +253,7 @@ class cmdClient(discord.Client):
         )
 
         # Add command to command cache and active contexts
-        self.cmd_cache[message.id] = ctx.flatten()
+        self.ctx_cache[message.id] = ctx.flatten()
         self.active_contexts[message.id] = ctx
         try:
             await cmd.run(ctx)
@@ -258,7 +265,7 @@ class cmdClient(discord.Client):
                 level=logging.ERROR)
         finally:
             # Renew command in command cache
-            self.cmd_cache[message.id] = ctx.flatten()
+            self.ctx_cache[message.id] = ctx.flatten()
 
             # Remove message from active contexts
             self.active_contexts.pop(message.id, None)
@@ -283,6 +290,45 @@ class cmdClient(discord.Client):
 
                 loaded += 1
         log("Imported {} modules from '{}', with {} new commands!".format(loaded, dirpath, len(self.cmds)-initial_cmds))
+
+    def add_message_parser(self, func, priority=0):
+        """
+        Add a message parser to execute when the command message parser fails.
+
+        Parameters
+        ----------
+        func: Function(Client, discord.Message)
+            Function taking the client and the discord message to process.
+        priority: int
+            Priority indiciating which order the parsers should be run.
+            The command message parser is always executed first.
+            After that, parsers are executed in order of increasing priority.
+        """
+        async def new_func(client, message):
+            try:
+                await func(client, message)
+            except Exception:
+                log("Exception encountered executing parser '{parser}' for a message "
+                    "from user '{message.author}' (uid:{message.author.id}) "
+                    "in guild '{message.guild}' (gid:{guildid}) "
+                    "in channel `{message.channel}' (cid:{message.channel.id}).\n"
+                    "Traceback:\n{traceback}\n"
+                    "Content:\n{content}".format(
+                        parser=func.__name__,
+                        message=message,
+                        guildid=message.guild.id if message.guild else None,
+                        content='\n'.join(('\t' + line for line in message.content.splitlines())),
+                        traceback='\n'.join(('\t' + line for line in traceback.format_exc().splitlines()))),
+                    context="mid:{}".format(message.id),
+                    level=logging.ERROR)
+
+        self.extra_message_parsers.insert(
+            bisect([parser[1] for parser in self.extra_message_parsers], priority),
+            (new_func, priority)
+        )
+        log("Adding message parser \"{}\" with priority \"{}\"".format(
+            func.__name__, priority
+        ))
 
     def add_after_event(self, event, func, priority=0):
         """
