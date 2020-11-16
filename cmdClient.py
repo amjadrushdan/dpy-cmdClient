@@ -136,7 +136,7 @@ class cmdClient(discord.Client):
     async def on_message(self, message):
         """
         Event handler for `message`.
-        Intended to be overriden.
+        Intended to be overridden.
         """
         await self.parse_message(message)
 
@@ -159,8 +159,8 @@ class cmdClient(discord.Client):
                 if flatctx.reparse_on_edit:
                     await self.parse_message(after)
             else:
-                # If the message isn't in cache, reparse
-                await self.parse_message(after)
+                # If the message isn't in cache, treat as a new message
+                await self.on_message(after)
 
     async def flat_command_response_cleaner(self, flatctx):
         ch = self.get_channel(flatctx.ch)
