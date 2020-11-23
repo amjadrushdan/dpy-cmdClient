@@ -222,10 +222,10 @@ class cmdClient(discord.Client):
             The remaining content of the command message after the prefix and command name.
         """
         cmd = self.cmd_names[cmdname]
-        log(("Executing command '{cmdname}' from module `{module}` "
+        log(("Executing command '{cmdname}' from module '{module}' "
              "from user '{message.author}' (uid:{message.author.id}) "
              "in guild '{message.guild}' (gid:{guildid}) "
-             "in channel `{message.channel}' (cid:{message.channel.id}).\n"
+             "in channel '{message.channel}' (cid:{message.channel.id}).\n"
              "{content}").format(
                  cmdname=cmdname,
                  module=cmd.module.name,
@@ -314,7 +314,7 @@ class cmdClient(discord.Client):
                 log("Exception encountered executing parser '{parser}' for a message "
                     "from user '{message.author}' (uid:{message.author.id}) "
                     "in guild '{message.guild}' (gid:{guildid}) "
-                    "in channel `{message.channel}' (cid:{message.channel.id}).\n"
+                    "in channel '{message.channel}' (cid:{message.channel.id}).\n"
                     "Traceback:\n{traceback}\n"
                     "Content:\n{content}".format(
                         parser=func.__name__,

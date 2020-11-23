@@ -34,13 +34,16 @@ class Command(object):
             ctx.tasks.append(task)
             await task
         except FailedCheck as e:
-            log("Command failed check: {}".format(e.check.name), context="mid:{}".format(ctx.msg.id))
+            log("Command failed check: {}".format(e.check.name),
+                context="mid:{}".format(ctx.msg.id),
+                level=logging.DEBUG)
 
             if e.check.msg:
                 await ctx.error_reply(e.check.msg)
         except SafeCancellation as e:
             log("Caught a safe command cancellation: {}: {}".format(e.__class__.__name__, e.msg),
-                context="mid:{}".format(ctx.msg.id))
+                context="mid:{}".format(ctx.msg.id),
+                level=logging.DEBUG)
 
             if e.msg is not None:
                 await ctx.error_reply(e.msg)
@@ -49,7 +52,9 @@ class Command(object):
 
             await ctx.error_reply("Operation timed out.")
         except asyncio.CancelledError:
-            log("Command was cancelled, probably due to a message edit.", context="mid:{}".format(ctx.msg.id))
+            log("Command was cancelled, probably due to a message edit.",
+                context="mid:{}".format(ctx.msg.id),
+                level=logging.DEBUG)
         except Exception as e:
             full_traceback = traceback.format_exc()
             only_error = "".join(traceback.TracebackException.from_exception(e).format_exception_only())
@@ -63,7 +68,9 @@ class Command(object):
                  "Please report the following error to the developer:\n`{}`").format(only_error)
             )
         else:
-            log("Command completed execution without error.", context="mid:{}".format(ctx.msg.id))
+            log("Command completed execution without error.",
+                context="mid:{}".format(ctx.msg.id),
+                level=logging.DEBUG)
 
     async def exec_wrapper(self, ctx):
         """
