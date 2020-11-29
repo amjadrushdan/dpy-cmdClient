@@ -196,12 +196,12 @@ class cmdClient(discord.Client):
         if prefixes is not None:
             for prefix in sorted(prefixes, reverse=True):
                 # If the message starts with a valid command, pass it along to run_cmd
-                content = content[len(prefix):].strip()
-                cmdnames = [cmdname for cmdname in self.cmd_names if content[:len(cmdname)].lower() == cmdname]
+                stripcontent = content[len(prefix):].strip()
+                cmdnames = [cmdname for cmdname in self.cmd_names if stripcontent[:len(cmdname)].lower() == cmdname]
 
                 if cmdnames:
                     cmdname = max(cmdnames, key=len)
-                    await self.run_cmd(message, cmdname, content[len(cmdname):].strip(), prefix)
+                    await self.run_cmd(message, cmdname, stripcontent[len(cmdname):].strip(), prefix)
                     return
 
         # Run the extra message parsers
