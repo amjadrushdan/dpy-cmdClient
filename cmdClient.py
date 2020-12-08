@@ -174,7 +174,7 @@ class cmdClient(discord.Client):
 
     async def active_command_response_cleaner(self, ctx):
         try:
-            if ctx.ch.permissions_for(ctx.guild.me).manage_messages:
+            if ctx.guild and ctx.ch.permissions_for(ctx.guild.me).manage_messages:
                 await ctx.ch.delete_messages(ctx.sent_messages)
             else:
                 await asyncio.gather(*(msg.delete() for msg in ctx.sent_messages))
