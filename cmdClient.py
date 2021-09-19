@@ -333,7 +333,7 @@ class cmdClient(discord.Client):
             func.__name__, priority
         ))
 
-    def add_after_event(self, event, func, priority=0):
+    def add_after_event(self, event, func=None, priority=0):
         """
         Add an event handler to execute after the central event handler.
 
@@ -348,27 +348,32 @@ class cmdClient(discord.Client):
             The core event handler is always executed first.
             After that, handlers are executed in order of increasing priority.
         """
-        async def new_func(*args, **kwargs):
-            try:
-                await func(*args, **kwargs)
-            except Exception:
-                log(
-                    ("Exception encountered executing event handler '{}' for event '{}'. "
-                     "Traceback:\n{}").format(
-                         func.__name__,
-                         event,
-                         traceback.format_exc()
-                     ), level=logging.ERROR
-                )
+        def wrapper(func):
+            async def new_func(*args, **kwargs):
+                try:
+                    await func(*args, **kwargs)
+                except Exception:
+                    log(
+                        ("Exception encountered executing event handler '{}' for event '{}'. "
+                        "Traceback:\n{}").format(
+                            func.__name__,
+                            event,
+                            traceback.format_exc()
+                        ), level=logging.ERROR
+                    )
+            after_handler = "after_" + event
+            if not hasattr(self, after_handler):
+                setattr(self, after_handler, [])
+            handlers = getattr(self, after_handler)
+            handlers.insert(bisect([handler[1] for handler in handlers], priority), (new_func, priority))
+            log("Adding after_event handler \"{}\" for event \"{}\" with priority \"{}\"".format(
+                func.__name__, event, priority
+            ))
 
-        after_handler = "after_" + event
-        if not hasattr(self, after_handler):
-            setattr(self, after_handler, [])
-        handlers = getattr(self, after_handler)
-        handlers.insert(bisect([handler[1] for handler in handlers], priority), (new_func, priority))
-        log("Adding after_event handler \"{}\" for event \"{}\" with priority \"{}\"".format(
-            func.__name__, event, priority
-        ))
+        if func is None:
+            return wrapper
+        else:
+            return wrapper(func)
 
     def dispatch(self, event, *args, **kwargs):
         super().dispatch(event, *args, **kwargs)
