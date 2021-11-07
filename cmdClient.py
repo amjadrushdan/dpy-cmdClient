@@ -239,12 +239,6 @@ class cmdClient(discord.Client):
                 context="mid:{}".format(message.id))
             self.update_cmdnames()
 
-        if not cmd.module.ready:
-            log("Waiting for module '{}' to be ready.".format(cmd.module.name),
-                context="mid:{}".format(message.id))
-            while not cmd.module.ready:
-                await asyncio.sleep(1)
-
         # Build the context
         ctx = self.baseContext(
             client=self,

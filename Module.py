@@ -1,3 +1,4 @@
+import asyncio
 from typing import Type, Optional
 
 from . import cmdClient
@@ -105,7 +106,11 @@ class Module:
         Pre-command hook.
         Executed before a command is run.
         """
-        pass
+        if not self.ready:
+            log("Waiting for module '{}' to be ready.".format(self.name),
+                context="mid:{}".format(ctx.msg.id))
+            while not self.ready:
+                await asyncio.sleep(1)
 
     async def post_command(self, ctx):
         """

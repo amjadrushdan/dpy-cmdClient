@@ -4,8 +4,9 @@ import re
 class SafeCancellation(Exception):
     default_msg = None
 
-    def __init__(self, msg=None):
+    def __init__(self, msg=None, details=None):
         self.msg = msg or self.default_msg
+        self.details = details or self.msg
 
 
 class UserCancelled(SafeCancellation):
