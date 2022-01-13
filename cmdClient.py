@@ -32,7 +32,7 @@ class cmdClient(discord.Client):
         self.owners = owners or []
         self.objects = {}
 
-        self.baseContext = Context  # type: Type[Context]
+        self.baseContext = baseContext  # type: Type[Context]
 
         self.ctx_cache = ctx_cache or LRUCache(1000)  # Previous Context cache, {messageid: ctxcache}
         self.active_contexts = {}  # Current active contexts, {messageid: ctx}
