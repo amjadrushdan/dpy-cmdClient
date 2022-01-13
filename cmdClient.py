@@ -26,7 +26,7 @@ class cmdClient(discord.Client):
 
     cmd_names = {}  # Command name cache, {cmdname: Command}, including aliases.
 
-    def __init__(self, prefix=None, owners=None, ctx_cache=None, baseContext=Context, **kwargs):
+    def __init__(self, prefix=None, owners=None, ctx_cache=None, baseContext: Optional[Type[Context]] = Context, **kwargs):
         super().__init__(**kwargs)
         self.prefix = prefix
         self.owners = owners or []
