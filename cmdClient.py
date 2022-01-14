@@ -26,13 +26,13 @@ class cmdClient(discord.Client):
 
     cmd_names = {}  # Command name cache, {cmdname: Command}, including aliases.
 
-    def __init__(self, prefix=None, owners=None, ctx_cache=None, baseContext=Context, **kwargs):
+    def __init__(self, prefix=None, owners=None, ctx_cache=None, baseContext: Type[Context] = Context, **kwargs):
         super().__init__(**kwargs)
         self.prefix = prefix
         self.owners = owners or []
         self.objects = {}
 
-        self.baseContext = Context  # type: Type[Context]
+        self.baseContext = baseContext  # type: Type[Context]
 
         self.ctx_cache = ctx_cache or LRUCache(1000)  # Previous Context cache, {messageid: ctxcache}
         self.active_contexts = {}  # Current active contexts, {messageid: ctx}
